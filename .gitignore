@@ -1,2 +1,4 @@
-work/images/
+work/
+logs/
+.DS_Store
 *.swp
