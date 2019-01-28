@@ -1,27 +1,43 @@
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model
 from keras import backend as K
-from keras.utils import plot_model
+from keras.callbacks import TensorBoard
+from keras.preprocessing.image import load_img,img_to_array
 import numpy as np
 import glob
 from PIL import Image
 
-#from keras.datasets import mnist
-#(x_train, _), (x_test, __) = mnist.load_data()
-#
-#print(np.shape(x_train[0]))
-#print(np.shape(x_train))
-#print(type(x_train))
+from keras.datasets import mnist
+(x_train, _), (x_test, __) = mnist.load_data()
+
+print(x_train[0])
+print(type(x_train[0]))
+print(np.shape(x_train[0]))
+print(np.shape(x_train))
+print(type(x_train))
 
 
 # Get images and convert
 
 IMAGE_FILE = './work/images/*.jpg'
 image_list = glob.glob(IMAGE_FILE)
-image_data_list = np.asarray([np.asarray(Image.open(image_data)) for image_data in image_list])
-print(np.shape(image_data_list[0]))
-print(np.shape(image_data_list))
-print(type(image_data_list))
+image_data_array = []
+for image_path in image_list:
+    image_data_list = np.array(Image.open(image_path))
+    #image_data_list = image_data_list.astype('float32') / 255.
+    print(np.shape(image_data_list))
+    image_data_list = np.reshape(image_data_list, (128, 128, -1))  # adapt this if using `channels_first` image data format
+    print(np.shape(image_data_list))
+    image_data_array.append(image_data_list)
+
+#image_data_list = image_data_list.astype('float32') / 255.
+#image_data_list = np.reshape(image_data_list, (len(image_data_list), 128, 128, 3))  # adapt this if using `channels_first` image data format
+print(image_data_array[0])
+print(np.shape(image_data_array[0]))
+print(np.shape(image_data_array))
+print(type(image_data_array))
+image_data_array = np.array(image_data_array)
+image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3))  # adapt this if using `channels_first` image data format
 
 # convert
 
@@ -58,6 +74,12 @@ autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 
 
+autoencoder.fit(image_data_array, image_data_array,
+                epochs=50,
+                batch_size=128,
+                shuffle=True,
+                validation_data=(image_data_array, image_data_array),
+                callbacks=[TensorBoard(log_dir='/logs/log.log')])
 
 
 
