@@ -7,47 +7,24 @@ import numpy as np
 import glob
 from PIL import Image
 
-from keras.datasets import mnist
-(x_train, _), (x_test, __) = mnist.load_data()
-
-print(x_train[0])
-print(type(x_train[0]))
-print(np.shape(x_train[0]))
-print(np.shape(x_train))
-print(type(x_train))
-
-
 # Get images and convert
 
 IMAGE_FILE = './work/images/*.jpg'
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 for image_path in image_list:
-    image_data_list = np.array(Image.open(image_path))
-    #image_data_list = image_data_list.astype('float32') / 255.
-    print(np.shape(image_data_list))
-    image_data_list = np.reshape(image_data_list, (128, 128, -1))  # adapt this if using `channels_first` image data format
-    print(np.shape(image_data_list))
+    image_data_list = Image.open(image_path)
+    #print(np.shape(image_data_list))
+    image_data_list = np.asarray(image_data_list.resize((128, 128)))
+    #print(np.shape(image_data_list))
     image_data_array.append(image_data_list)
 
-#image_data_list = image_data_list.astype('float32') / 255.
-#image_data_list = np.reshape(image_data_list, (len(image_data_list), 128, 128, 3))  # adapt this if using `channels_first` image data format
-print(image_data_array[0])
-print(np.shape(image_data_array[0]))
 print(np.shape(image_data_array))
 print(type(image_data_array))
 image_data_array = np.array(image_data_array)
 image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3))  # adapt this if using `channels_first` image data format
-
-# convert
-
-
-
-
-#x_train = x_train.astype('float32') / 255.
-#x_test = x_test.astype('float32') / 255.
-#x_train = np.reshape(x_train, (len(x_train), 128, 128, 3))  # adapt this if using `channels_first` image data format
-#x_test = np.reshape(x_test, (len(x_test), 128, 128, 3))  # adapt this if using `channels_first` image data format
+print(np.shape(image_data_array))
+print(type(image_data_array))
 
 input_img = Input(shape=(128, 128, 3))  # adapt this if using `channels_first` image data format
 
