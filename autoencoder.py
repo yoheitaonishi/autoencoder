@@ -14,17 +14,11 @@ image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 for image_path in image_list:
     image_data_list = Image.open(image_path)
-    #print(np.shape(image_data_list))
     image_data_list = np.asarray(image_data_list.resize((128, 128)))
-    #print(np.shape(image_data_list))
     image_data_array.append(image_data_list)
 
-print(np.shape(image_data_array))
-print(type(image_data_array))
 image_data_array = np.array(image_data_array)
 image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3))  # adapt this if using `channels_first` image data format
-print(np.shape(image_data_array))
-print(type(image_data_array))
 
 input_img = Input(shape=(128, 128, 3))  # adapt this if using `channels_first` image data format
 
