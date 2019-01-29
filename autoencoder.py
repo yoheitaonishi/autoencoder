@@ -4,18 +4,27 @@ from keras import backend as K
 from keras.callbacks import TensorBoard
 from keras.utils import plot_model
 from keras.preprocessing.image import load_img,img_to_array
+import os
 import numpy as np
 import glob
 from PIL import Image
 
 # Get images and convert
 IMAGE_FILE = './work/images/*.jpg'
+RESIZE_IMAGE_SAVE_PATH = './work/images/resize/'
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
+
 for image_path in image_list:
-    image_data_list = Image.open(image_path)
-    image_data_list = np.asarray(image_data_list.resize((128, 128)))
-    image_data_array.append(image_data_list)
+    image_data = Image.open(image_path)
+    image_data = image_data.resize((128, 128))
+
+    basename = os.path.basename(image_path)
+    resize_image_save_file = RESIZE_IMAGE_SAVE_PATH + basename
+    image_data.save(resize_image_save_file)
+
+    image_data = np.asarray(image_data)
+    image_data_array.append(image_data)
 
 image_data_array = np.array(image_data_array)
 image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3))  # adapt this if using `channels_first` image data format
