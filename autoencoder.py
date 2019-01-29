@@ -12,6 +12,7 @@ from PIL import Image
 # Get images and convert
 IMAGE_FILE = './work/images/*.jpg'
 RESIZE_IMAGE_SAVE_PATH = './work/images/resize/'
+DECODE_IMAGE_SAVE_PATH = './work/images/decode/'
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 
@@ -52,9 +53,14 @@ autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 autoencoder.fit(image_data_array, image_data_array,
-                epochs=50,
+                epochs=1,
                 batch_size=128,
                 shuffle=True,
                 validation_data=(image_data_array, image_data_array),
                 callbacks=[TensorBoard(log_dir='./logs/log.log')])
+
+autoencoder.save_weights("./train.h5")
+
+decoded_images = autoencoder.predict(image_data_array)
+#for decode_image in decoded_images:
 
