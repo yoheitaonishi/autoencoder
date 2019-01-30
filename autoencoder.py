@@ -3,15 +3,25 @@ from keras.models import Model
 from keras.callbacks import TensorBoard
 from keras.utils import plot_model
 from keras.preprocessing.image import array_to_img
+import keras.backend as K
+import argparse
 import os
 import numpy as np
 import glob
 from PIL import Image
 
+parser = argparse.ArgumentParser() 
+parser.add_argument('--source-dir', help='images directory', default='./work/images')
+parser.add_argument('--decode-dir', help='decode images directory', default='./work/images/decode')
+parser.add_argument('--resize-dir', help='resize images directory', default = './work/images/resize')
+parser.add_argument('--batch-size', help='batch size', type=int, default=128)
+parser.add_argument('--epoch', help='epoch', type=int, default=50)
+args = parser.parse_args()
+
 # Get images and convert
-IMAGE_FILE = './work/images/*.jpg'
-RESIZE_IMAGE_SAVE_PATH = './work/images/resize/'
-DECODE_IMAGE_SAVE_PATH = './work/images/decode/'
+IMAGE_FILE = args.source_dir + '/*.jpg'
+DECODE_IMAGE_SAVE_PATH = args.decode_dir + '/'
+RESIZE_IMAGE_SAVE_PATH = args.resize_dir + '/'
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 
@@ -53,11 +63,11 @@ autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 autoencoder.fit(image_data_array, image_data_array,
-                epochs=50,
-                batch_size=128,
+                epochs=args.epoch,
+                batch_size=args.batch_size,
                 shuffle=True,
                 validation_data=(image_data_array, image_data_array),
-                callbacks=[TensorBoard(log_dir='./logs/log.log')])
+                callbacks=[TensorBoard(log_dir='./logs')])
 
 autoencoder.save_weights("./train.h5")
 
