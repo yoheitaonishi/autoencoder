@@ -1,9 +1,8 @@
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model
-from keras import backend as K
 from keras.callbacks import TensorBoard
 from keras.utils import plot_model
-from keras.preprocessing.image import load_img,img_to_array
+from keras.preprocessing.image import array_to_img
 import os
 import numpy as np
 import glob
@@ -21,6 +20,7 @@ for image_path in image_list:
     image_data = image_data.resize((128, 128))
 
     basename = os.path.basename(image_path)
+    basename = basename.replace('jpg', 'png')
     resize_image_save_file = RESIZE_IMAGE_SAVE_PATH + basename
     image_data.save(resize_image_save_file)
 
@@ -53,7 +53,7 @@ autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 autoencoder.fit(image_data_array, image_data_array,
-                epochs=1,
+                epochs=50,
                 batch_size=128,
                 shuffle=True,
                 validation_data=(image_data_array, image_data_array),
@@ -62,5 +62,10 @@ autoencoder.fit(image_data_array, image_data_array,
 autoencoder.save_weights("./train.h5")
 
 decoded_images = autoencoder.predict(image_data_array)
-#for decode_image in decoded_images:
+for (decode_image, image_path) in zip(decoded_images, image_list):
+    image_data = array_to_img(decode_image)
+    basename = os.path.basename(image_path)
+    basename = basename.replace('jpg', 'png')
+    decode_image_save_file = DECODE_IMAGE_SAVE_PATH + basename
+    image_data.save(decode_image_save_file)
 
