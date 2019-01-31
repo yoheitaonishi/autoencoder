@@ -12,6 +12,18 @@ from PIL import Image
 import logging
 from logging import getLogger, StreamHandler, Formatter
 
+logger = getLogger("RUN INFORMATION")
+logger.setLevel(logging.INFO)
+stream_handler = StreamHandler()
+stream_handler.setLevel(logging.INFO)
+handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+stream_handler.setFormatter(handler_format)
+
+# --------------------------------
+# 3.loggerにhandlerをセット
+# --------------------------------
+logger.addHandler(stream_handler)
+
 parser = argparse.ArgumentParser() 
 parser.add_argument('--source-dir', help='images directory', default='./work/images')
 parser.add_argument('--decode-dir', help='decode images directory', default='./work/images/decode')
@@ -26,7 +38,7 @@ RESIZE_IMAGE_SAVE_PATH = args.resize_dir + '/'
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 
-logging.info('Loading Image...')
+logger.info('Loading Image...')
 
 for image_path in image_list:
     image_data = Image.open(image_path)
@@ -43,7 +55,7 @@ for image_path in image_list:
 image_data_array = np.array(image_data_array)
 image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3)) 
 
-logging.info('Finish Loading Image!')
+logger.info('Finish Loading Image!')
 
 input_img = Input(shape=(128, 128, 3)) 
 x = Conv2D(64, (3, 3), activation='relu', padding='same')(input_img)
@@ -67,7 +79,7 @@ autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
 
-logging.info('Traing Model...')
+logger.info('Traing Model...')
 
 autoencoder.fit(image_data_array, image_data_array,
                 epochs=args.epoch,
@@ -77,10 +89,10 @@ autoencoder.fit(image_data_array, image_data_array,
                 callbacks=[TensorBoard(log_dir='./logs')])
 autoencoder.save_weights("./train.h5")
 
-logging.info('Finish Traing Model!')
+logger.info('Finish Traing Model!')
 
 
-logging.info('Decoding and Saving  Model...')
+logger.info('Decoding and Saving  Model...')
 
 decoded_images = autoencoder.predict(image_data_array)
 for (decode_image, image_path) in zip(decoded_images, image_list):
@@ -90,4 +102,4 @@ for (decode_image, image_path) in zip(decoded_images, image_list):
     decode_image_save_file = DECODE_IMAGE_SAVE_PATH + basename
     image_data.save(decode_image_save_file)
 
-logging.info('Finish Decoding and Saving  Model...')
+logger.info('Finish Decoding and Saving  Model...')
