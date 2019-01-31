@@ -12,18 +12,16 @@ from PIL import Image
 import logging
 from logging import getLogger, StreamHandler, Formatter
 
+# Set up logger
 logger = getLogger("RUN INFORMATION")
 logger.setLevel(logging.INFO)
 stream_handler = StreamHandler()
 stream_handler.setLevel(logging.INFO)
 handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 stream_handler.setFormatter(handler_format)
-
-# --------------------------------
-# 3.loggerにhandlerをセット
-# --------------------------------
 logger.addHandler(stream_handler)
 
+# Set argument
 parser = argparse.ArgumentParser() 
 parser.add_argument('--source-dir', help='images directory', default='./work/images')
 parser.add_argument('--decode-dir', help='decode images directory', default='./work/images/decode')
@@ -32,9 +30,11 @@ parser.add_argument('--batch-size', help='batch size', type=int, default=128)
 parser.add_argument('--epoch', help='epoch', type=int, default=50)
 args = parser.parse_args()
 
+# Directory path
 IMAGE_FILE = args.source_dir + '/*.jpg'
 DECODE_IMAGE_SAVE_PATH = args.decode_dir + '/'
 RESIZE_IMAGE_SAVE_PATH = args.resize_dir + '/'
+
 image_list = glob.glob(IMAGE_FILE)
 image_data_array = []
 
@@ -78,7 +78,6 @@ decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
 autoencoder = Model(input_img, decoded)
 autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
-
 logger.info('Traing Model...')
 
 autoencoder.fit(image_data_array, image_data_array,
@@ -92,7 +91,7 @@ autoencoder.save_weights("./train.h5")
 logger.info('Finish Traing Model!')
 
 
-logger.info('Decoding and Saving  Model...')
+logger.info('Decoding and Saving Image...')
 
 decoded_images = autoencoder.predict(image_data_array)
 for (decode_image, image_path) in zip(decoded_images, image_list):
@@ -102,4 +101,4 @@ for (decode_image, image_path) in zip(decoded_images, image_list):
     decode_image_save_file = DECODE_IMAGE_SAVE_PATH + basename
     image_data.save(decode_image_save_file)
 
-logger.info('Finish Decoding and Saving  Model...')
+logger.info('Finish Decoding and Saving Imag!e
