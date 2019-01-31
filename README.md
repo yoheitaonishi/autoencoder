@@ -18,6 +18,11 @@ python autoencoder.py --source-dir [source-dir] --decode-dir [decode-dir] --resi
 --batch-size (int) : batch size  
 --epock      (int) : epoch  
 
+Example: 
+```
+python autoencoder.py --source-dir './work/images' --decode-dir './work/images/decode' --resize-dir './work/images/resize' --batch-size 128 --epoch 50
+```
+
 ## Use TensorBoard
 
 If you want to use TensorBoard for visualizing how training model is going on, you can use TensorBoard.  
