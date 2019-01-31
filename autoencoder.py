@@ -15,11 +15,7 @@ from logging import getLogger, StreamHandler, Formatter
 # Set up logger
 logger = getLogger("RUN INFORMATION")
 logger.setLevel(logging.INFO)
-stream_handler = StreamHandler()
-stream_handler.setLevel(logging.INFO)
-handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-stream_handler.setFormatter(handler_format)
-logger.addHandler(stream_handler)
+logging.basicConfig(format='%(asctime)s %(message)s', filename='logs/log.log')
 
 # Set argument
 parser = argparse.ArgumentParser() 
@@ -101,4 +97,4 @@ for (decode_image, image_path) in zip(decoded_images, image_list):
     decode_image_save_file = DECODE_IMAGE_SAVE_PATH + basename
     image_data.save(decode_image_save_file)
 
-logger.info('Finish Decoding and Saving Imag!e
+logger.info('Finish Decoding and Saving Image!')
