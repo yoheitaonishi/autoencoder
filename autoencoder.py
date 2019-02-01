@@ -1,101 +1,182 @@
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Model
-from keras.callbacks import TensorBoard
-from keras.utils import plot_model
-from keras.preprocessing.image import array_to_img
-import keras.backend as K
-import os
 import argparse
-import numpy as np
 import glob
-from PIL import Image
 import logging
-from logging import getLogger, StreamHandler, Formatter
+import os
 
-# Set up logger
-logger = getLogger("RUN INFORMATION")
-logger.setLevel(logging.INFO)
-logging.basicConfig(format='%(asctime)s %(message)s', filename='logs/log.log')
-
-# Set argument
-parser = argparse.ArgumentParser() 
-parser.add_argument('--source-dir', help='images directory', default='./work/images')
-parser.add_argument('--decode-dir', help='decode images directory', default='./work/images/decode')
-parser.add_argument('--resize-dir', help='resize images directory', default = './work/images/resize')
-parser.add_argument('--batch-size', help='batch size', type=int, default=128)
-parser.add_argument('--epoch', help='epoch', type=int, default=50)
-args = parser.parse_args()
-
-# Directory path
-IMAGE_FILE = args.source_dir + '/*.jpg'
-DECODE_IMAGE_SAVE_PATH = args.decode_dir + '/'
-RESIZE_IMAGE_SAVE_PATH = args.resize_dir + '/'
-
-image_list = glob.glob(IMAGE_FILE)
-image_data_array = []
-
-logger.info('Loading Image...')
-
-for image_path in image_list:
-    image_data = Image.open(image_path)
-    image_data = image_data.resize((128, 128))
-
-    basename = os.path.basename(image_path)
-    basename = basename.replace('jpg', 'png')
-    resize_image_save_file = RESIZE_IMAGE_SAVE_PATH + basename
-    image_data.save(resize_image_save_file)
-
-    image_data = np.asarray(image_data)
-    image_data_array.append(image_data)
-
-image_data_array = np.array(image_data_array)
-image_data_array = image_data_array.astype('float32') / 255.
-image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3)) 
-
-logger.info('Finish Loading Image!')
-
-input_img = Input(shape=(128, 128, 3)) 
-x = Conv2D(64, (3, 3), activation='relu', padding='same')(input_img)
-x = MaxPooling2D((2, 2), padding='same')(x)
-x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-x = MaxPooling2D((2, 2), padding='same')(x)
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
-encoded = MaxPooling2D((2, 2), padding='same')(x)
-
-# at this point the representation is (16, 16, 16) i.e. 4096-dimensional
-
-x = Conv2D(16, (3, 3), activation='relu', padding='same')(encoded)
-x = UpSampling2D((2, 2))(x)
-x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-x = UpSampling2D((2, 2))(x)
-x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
-x = UpSampling2D((2, 2))(x)
-decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
-
-autoencoder = Model(input_img, decoded)
-autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
-
-logger.info('Traing Model...')
-
-autoencoder.fit(image_data_array, image_data_array,
-                epochs=args.epoch,
-                batch_size=args.batch_size,
-                shuffle=True,
-                validation_data=(image_data_array, image_data_array),
-                callbacks=[TensorBoard(log_dir='./logs')])
-autoencoder.save_weights("./train.h5")
-
-logger.info('Finish Traing Model!')
+import numpy as np
+from keras.callbacks import TensorBoard
+from keras.layers import Conv2D, Input, MaxPooling2D, UpSampling2D
+from keras.models import Model
+from keras.preprocessing.image import array_to_img
+from keras.utils import plot_model
+from PIL import Image
 
 
-logger.info('Decoding and Saving Image...')
+def setup_logger():
+    """
+    Set up logger
+    """
+    logger = logging.getLogger("RUN INFORMATION")
+    logger.setLevel(logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(message)s', filename='logs/log.log')
+    return logger
 
-decoded_images = autoencoder.predict(image_data_array)
-for (decode_image, image_path) in zip(decoded_images, image_list):
-    image_data = array_to_img(decode_image)
-    basename = os.path.basename(image_path)
-    basename = basename.replace('jpg', 'png')
-    decode_image_save_file = DECODE_IMAGE_SAVE_PATH + basename
-    image_data.save(decode_image_save_file)
+def setup_argument_parser():
+    """
+    Set argument
+    """
+    parser = argparse.ArgumentParser() 
+    parser.add_argument('--source-dir', help='source image directory', default='./work/images', required=True)
+    parser.add_argument('--decode-dir', help='saving decoded image directory', default='./work/decode', required=True)
+    parser.add_argument('--resize-dir', help='saving resized image directory', default = './work/resize', required=True)
+    parser.add_argument('--batch-size', help='batch size', type=int, default=16)
+    parser.add_argument('--epoch', help='epoch', type=int, default=50)
+    return parser
 
-logger.info('Finish Decoding and Saving Image!')
+def get_image_list(source_dir):
+    """
+    Get image path
+    """
+    image_list = glob.glob(source_dir + '/*.jpg')
+    return image_list
+
+
+def load_image(image_list, resize_dir, logger=None):
+    """
+    Load image and convert packed numpy array
+    """
+    image_data_array = []
+
+    if logger:
+        logger.info('Loading Image...')
+
+    for image_path in image_list:
+        image_data = Image.open(image_path)
+        image_data = image_data.resize((128, 128))
+
+        basename = os.path.basename(image_path)
+        basename = basename.replace('jpg', 'png')
+        resize_image_save_file = os.path.join(resize_dir, basename)
+        image_data.save(resize_image_save_file)
+
+        image_data = np.asarray(image_data)
+        image_data_array.append(image_data)
+
+    image_data_array = np.array(image_data_array)
+    image_data_array = image_data_array.astype('float32') / 255.
+    image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3)) 
+
+    if logger:
+        logger.info('Finish Loading Image!')
+
+    return image_data_array
+
+def build_model():
+    """
+    Building model
+    """
+    input_img = Input(shape=(128, 128, 3)) 
+    x = Conv2D(64, (3, 3), activation='relu', padding='same')(input_img)
+    x = MaxPooling2D((2, 2), padding='same')(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    x = MaxPooling2D((2, 2), padding='same')(x)
+    x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+    encoded = MaxPooling2D((2, 2), padding='same')(x)
+
+    # at this point the representation is (16, 16, 16) i.e. 4096-dimensional
+
+    x = Conv2D(16, (3, 3), activation='relu', padding='same')(encoded)
+    x = UpSampling2D((2, 2))(x)
+    x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    x = UpSampling2D((2, 2))(x)
+    x = Conv2D(64, (3, 3), activation='relu', padding='same')(x)
+    x = UpSampling2D((2, 2))(x)
+    decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(x)
+
+    autoencoder = Model(input_img, decoded)
+    return autoencoder
+
+def set_optimizer(model):
+    """
+    Setting optimizer and loss function
+    """
+    model.compile(optimizer='AdaDelta', loss='binary_crossentropy')
+
+def train_autoencoder(model, image_data_array, batch_size, epoch, logger=None):
+    """
+    Training model and save trained weight
+    """
+    if logger:
+        logger.info('Training Model...')
+
+    model.fit(image_data_array, image_data_array,
+                    epochs=epoch,
+                    batch_size=batch_size,
+                    shuffle=True,
+                    validation_data=(image_data_array, image_data_array),
+                    callbacks=[TensorBoard(log_dir='./work/logs')])
+
+    model.save_weights("./work/trained.h5")
+
+    if logger:
+        logger.info('Finish Traing Model!')
+
+
+def decode_image(model, image_data_array, image_path_list, decode_dir, logger=None):
+    """
+    Decode and save images
+    """
+    if logger:
+        logger.info('Decoding and Saving Image...')
+
+    decoded_image_array = model.predict(image_data_array)
+
+    # save
+    for (decoded, image_path) in zip(decoded_image_array, image_path_list):
+        image_data = array_to_img(decoded)
+
+        # saved path
+        filename = os.path.basename(image_path)
+        base, _ = os.path.splitext(filename)
+        save_path = os.path.join(decode_dir, base + '.png')
+
+        image_data.save(save_path)
+
+    if logger:
+        logger.info('Finish Decoding and Saving Image!')
+
+def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, logger=None):
+    """
+    Run autoencoder
+    """
+    # data preparing
+    image_path_list = get_image_list(source_dir)
+    image_data_array = load_image(image_path_list, resize_dir, logger)
+
+    # NN model preparing
+    model = build_model()
+    set_optimizer(model)
+
+    # training
+    train_autoencoder(model, image_data_array, batch_size, epoch, logger)
+
+    # output result
+    decode_image(model, image_data_array, image_path_list, decode_dir, logger=None)
+
+
+if __name__ == '__main__':
+    # setup
+    logger = setup_logger()
+
+    parser = setup_argument_parser()
+    args = parser.parse_args()
+
+    # main process
+    autoencoder(
+        source_dir=args.source_dir, 
+        decode_dir=args.decode_dir,
+        resize_dir=args.resize_dir,
+        batch_size=args.batch_size,
+        epoch=args.epoch,
+        logger=logger
+    )

@@ -12,11 +12,11 @@ Command to run autoencoder is
 python autoencoder.py --source-dir [source-dir] --decode-dir [decode-dir] --resize-dir [resize-dir] --batch-size [batch-size] --epoch [epoch]
 ```
 
---source-dir (str) : Image directory for training and resizing and decoding  
---decode-dir (str) : Image directory for saving decoded images  
---resize-dir (str) : Image directory for saving resized images  
+--source-dir (str, required) : Image directory for training and resizing and decoding  
+--decode-dir (str, required) : Image directory for saving decoded images  
+--resize-dir (str, required) : Image directory for saving resized images  
 --batch-size (int) : batch size  
---epock      (int) : epoch  
+--epoch      (int) : epoch  
 
 Example: 
 ```
