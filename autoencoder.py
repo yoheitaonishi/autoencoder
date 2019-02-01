@@ -49,6 +49,7 @@ for image_path in image_list:
     image_data_array.append(image_data)
 
 image_data_array = np.array(image_data_array)
+image_data_array = image_data_array.astype('float32') / 255.
 image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3)) 
 
 logger.info('Finish Loading Image!')
