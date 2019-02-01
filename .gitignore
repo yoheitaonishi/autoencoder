@@ -3,3 +3,4 @@ work/
 *.swp
 logs/
 .vscode/
+train.h5
