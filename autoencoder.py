@@ -11,6 +11,7 @@ from keras.preprocessing.image import array_to_img
 from keras.utils import plot_model
 from PIL import Image
 
+INPUT_IMAGE_SIZE = 128
 
 def setup_logger():
     """
@@ -31,6 +32,8 @@ def setup_argument_parser():
     parser.add_argument('--resize-dir', help='saving resized image directory', default = './work/resize', required=True)
     parser.add_argument('--batch-size', help='batch size', type=int, default=16)
     parser.add_argument('--epoch', help='epoch', type=int, default=50)
+    parser.add_argument('--trained-weight', help='saving trained h5 file directory', default='./work/trained.5h')
+    parser.add_argument('--log-dir', help='tensor board log directory')
     return parser
 
 def get_image_list(source_dir):
@@ -52,7 +55,10 @@ def load_image(image_list, resize_dir, logger=None):
 
     for image_path in image_list:
         image_data = Image.open(image_path)
-        image_data = image_data.resize((128, 128))
+        image_data = image_data.resize((INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE))
+
+        if not os.path.exists(resize_dir):
+            os.makedirs(resize_dir)
 
         basename = os.path.basename(image_path)
         basename = basename.replace('jpg', 'png')
@@ -64,7 +70,7 @@ def load_image(image_list, resize_dir, logger=None):
 
     image_data_array = np.array(image_data_array)
     image_data_array = image_data_array.astype('float32') / 255.
-    image_data_array = np.reshape(image_data_array, (len(image_data_array), 128, 128, 3)) 
+    image_data_array = np.reshape(image_data_array, (len(image_data_array), INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE, 3)) 
 
     if logger:
         logger.info('Finish Loading Image!')
@@ -75,7 +81,7 @@ def build_model():
     """
     Building model
     """
-    input_img = Input(shape=(128, 128, 3)) 
+    input_img = Input(shape=(INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE, 3)) 
     x = Conv2D(64, (3, 3), activation='relu', padding='same')(input_img)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
@@ -102,21 +108,28 @@ def set_optimizer(model):
     """
     model.compile(optimizer='AdaDelta', loss='binary_crossentropy')
 
-def train_autoencoder(model, image_data_array, batch_size, epoch, logger=None):
+def train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger=None):
     """
     Training model and save trained weight
     """
     if logger:
         logger.info('Training Model...')
 
-    model.fit(image_data_array, image_data_array,
-                    epochs=epoch,
-                    batch_size=batch_size,
-                    shuffle=True,
-                    validation_data=(image_data_array, image_data_array),
-                    callbacks=[TensorBoard(log_dir='./work/logs')])
+    if log_dir is not None:
+        model.fit(image_data_array, image_data_array,
+                        epochs=epoch,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        validation_data=(image_data_array, image_data_array),
+                        callbacks=[TensorBoard(log_dir=log_dir)])
+    else:
+        model.fit(image_data_array, image_data_array,
+                        epochs=epoch,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        validation_data=(image_data_array, image_data_array))
 
-    model.save_weights("./work/trained.h5")
+    model.save_weights(trained_weight)
 
     if logger:
         logger.info('Finish Traing Model!')
@@ -136,6 +149,8 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
         image_data = array_to_img(decoded)
 
         # saved path
+        if not os.path.exists(decode_dir):
+            os.makedirs(decode_dir)
         filename = os.path.basename(image_path)
         base, _ = os.path.splitext(filename)
         save_path = os.path.join(decode_dir, base + '.png')
@@ -145,7 +160,7 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
     if logger:
         logger.info('Finish Decoding and Saving Image!')
 
-def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, logger=None):
+def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_weight, log_dir, logger=None):
     """
     Run autoencoder
     """
@@ -158,7 +173,7 @@ def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, logger=No
     set_optimizer(model)
 
     # training
-    train_autoencoder(model, image_data_array, batch_size, epoch, logger)
+    train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger)
 
     # output result
     decode_image(model, image_data_array, image_path_list, decode_dir, logger=None)
@@ -178,5 +193,7 @@ if __name__ == '__main__':
         resize_dir=args.resize_dir,
         batch_size=args.batch_size,
         epoch=args.epoch,
-        logger=logger
+        trained_weight=args.trained_weight,
+        log_dir=args.log_dir,
+        logger=logger,
     )
