@@ -8,9 +8,7 @@ import cv2
 from keras.callbacks import TensorBoard
 from keras.layers import Conv2D, Input, MaxPooling2D, UpSampling2D
 from keras.models import Model
-from keras.preprocessing.image import array_to_img
 from keras.utils import plot_model
-from PIL import Image
 
 INPUT_IMAGE_SIZE = 128
 
