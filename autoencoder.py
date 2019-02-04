@@ -148,6 +148,7 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
     # save
     for (decoded, image_path) in zip(decoded_image_array, image_path_list):
         image_data = array_to_img(decoded)
+        #image_data = decoded
 
         # saved path
         if not os.path.exists(decode_dir):
@@ -155,7 +156,8 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
         filename = os.path.basename(image_path)
         base, _ = os.path.splitext(filename)
         save_path = os.path.join(decode_dir, base + '.png')
-        cv2.imwrite(save_path, image_data)
+        #cv2.imwrite(save_path, image_data)
+        image_data.save(save_path)
 
     if logger:
         logger.info('Finish Decoding and Saving Image!')
