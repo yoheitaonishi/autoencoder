@@ -4,6 +4,7 @@ import logging
 import os
 
 import numpy as np
+import cv2
 from keras.callbacks import TensorBoard
 from keras.layers import Conv2D, Input, MaxPooling2D, UpSampling2D
 from keras.models import Model
@@ -54,8 +55,8 @@ def load_image(image_list, resize_dir, logger=None):
         logger.info('Loading Image...')
 
     for image_path in image_list:
-        image_data = Image.open(image_path)
-        image_data = image_data.resize((INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE))
+        image_data = cv2.imread(image_path)
+        image_data = cv2.resize(image_data, dsize=(INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE))
 
         if not os.path.exists(resize_dir):
             os.makedirs(resize_dir)
@@ -63,7 +64,7 @@ def load_image(image_list, resize_dir, logger=None):
         basename = os.path.basename(image_path)
         basename = basename.replace('jpg', 'png')
         resize_image_save_file = os.path.join(resize_dir, basename)
-        image_data.save(resize_image_save_file)
+        cv2.imwrite(resize_image_save_file, image_data)
 
         image_data = np.asarray(image_data)
         image_data_array.append(image_data)
@@ -154,8 +155,7 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
         filename = os.path.basename(image_path)
         base, _ = os.path.splitext(filename)
         save_path = os.path.join(decode_dir, base + '.png')
-
-        image_data.save(save_path)
+        cv2.imwrite(save_path, image_data)
 
     if logger:
         logger.info('Finish Decoding and Saving Image!')
