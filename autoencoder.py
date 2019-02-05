@@ -31,7 +31,8 @@ def setup_argument_parser():
     parser.add_argument('--resize-dir', help='saving resized image directory', default = './work/resize', required=True)
     parser.add_argument('--batch-size', help='batch size', type=int, default=16)
     parser.add_argument('--epoch', help='epoch', type=int, default=50)
-    parser.add_argument('--trained-weight', help='saving trained h5 file directory', default='./work/trained.5h')
+    parser.add_argument('--trained-weight', help='saving trained h5 file directory', default='./work/trained.h5')
+    parser.add_argument('--initial-weight', help='load pretrain h5 file', default='./pretrained.h5')
     parser.add_argument('--log-dir', help='tensor board log directory')
     return parser
 
@@ -158,7 +159,7 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
     if logger:
         logger.info('Finish Decoding and Saving Image!')
 
-def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_weight, log_dir, logger=None):
+def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_weight, initial_weight, log_dir, logger=None):
     """
     Run autoencoder
     """
@@ -168,6 +169,8 @@ def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_w
 
     # NN model preparing
     model = build_model()
+    if initial_weight is not None:
+        model.load_weights(initial_weight)
     set_optimizer(model)
 
     # training
@@ -192,6 +195,7 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         epoch=args.epoch,
         trained_weight=args.trained_weight,
+        initial_weight=args.initial_weight,
         log_dir=args.log_dir,
         logger=logger,
     )
