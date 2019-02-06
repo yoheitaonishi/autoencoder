@@ -10,7 +10,7 @@ def setup_argument_parser():
     """
     parser = argparse.ArgumentParser() 
     parser.add_argument('--input-dir', help='input images directory', default='work/input/', required=True)
-    parser.add_argument('--include', help='input images file name', default='*.jpg', required=True)
+    parser.add_argument('--include', help='input images file name', default='*.jpg')
     parser.add_argument('--output-dir', help='source image directory', default='work/output/', required=True)
     parser.add_argument('--area', help='crop area (x, y, width, height)', default='252,427,1050,800', required=True)
     return parser
