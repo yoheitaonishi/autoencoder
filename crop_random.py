@@ -17,21 +17,21 @@ def setup_argument_parser():
     parser.add_argument('--output-prefix', help='source image file name', default='label_poodl', required=True)
     parser.add_argument('--output-ext', help='source image file extension', default='png', required=True)
     parser.add_argument('--size', help='crop size (width, height)', default='300, 300', required=True)
+    parser.add_argument('--count', help='number of output images', type=int, default=100, required=True)
     parser.add_argument('--seed', help='random seed for deciding origin point(x,y)', type=int, default=1234567)
     return parser
 
-def get_random_value(image_size, crop_size, seed):
+def get_random_value(image_size, crop_size):
     max_range = image_size - crop_size
-    random.seed(seed)
     value = random.random() * max_range
     value = round(value)
     return value
 
-def get_random_origin_point(image_width, image_height, crop_width, crop_height, seed):
-    x = get_random_value(image_width, crop_width, seed)
-    y = get_random_value(image_height, crop_height, seed)
+def get_random_origin_point(image_width, image_height, crop_width, crop_height):
+    x = get_random_value(image_width, crop_width)
+    y = get_random_value(image_height, crop_height)
     width = x + crop_width
-    height = x + crop_height
+    height = y + crop_height
     return x, y, width, height
  
 def get_image_info(image_shape, size, seed):
@@ -46,27 +46,26 @@ def get_image_info(image_shape, size, seed):
     crop_width = size[0]
     crop_height = size[1]
 
-    x, y, width, height = get_random_origin_point(image_width=image_width, image_height=image_height, crop_width=crop_width, crop_height=crop_height, seed=seed)
+    x, y, width, height = get_random_origin_point(image_width=image_width, image_height=image_height, crop_width=crop_width, crop_height=crop_height)
     return x, y, width, height
 
-def get_image_list(input_dir, include):
+def get_image_src(input_dir, include):
     """
     Get image path
     """
     image_list = glob.glob(input_dir + include)
-    return image_list
+    image_data_src = random.choice(image_list)
+    return image_data_src
 
-def crop_images(input_dir, include, output_dir, output_prefix, output_ext, size, seed):
+def crop_images(input_dir, include, output_dir, output_prefix, output_ext, count, size):
     """
     Crop images
     """
-    image_list = get_image_list(input_dir, include)
-
-    for i, image_path in enumerate(image_list):
-        image_data = cv2.imread(image_path)
+    for i in range(count):
+        image_data_src = get_image_src(input_dir, include)
+        image_data = cv2.imread(image_data_src)
         image_shape = np.shape(image_data)
         x, y, width, height = get_image_info(image_shape=image_shape, size=size, seed=seed)
-        print(x, y, width, height)
         image_data = image_data[y:height, x:width]
 
         if not os.path.exists(output_dir):
@@ -81,6 +80,8 @@ if __name__ == '__main__':
     # setup
     parser = setup_argument_parser()
     args = parser.parse_args()
+    seed = args.seed
+    random.seed(seed)
 
     # main process
     crop_images(
@@ -89,6 +90,6 @@ if __name__ == '__main__':
         output_dir=args.output_dir,
         output_prefix=args.output_prefix,
         output_ext=args.output_ext,
+        count=args.count,
         size=args.size,
-        seed=args.seed
     )
