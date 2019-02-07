@@ -11,6 +11,7 @@ from keras.models import Model
 from keras.utils import plot_model
 
 INPUT_IMAGE_SIZE = 128
+SALT_AND_PEPPER_NUMBER = 1000
 
 def setup_logger():
     """
@@ -34,6 +35,10 @@ def setup_argument_parser():
     parser.add_argument('--trained-weight', help='saving trained h5 file directory', default='./work/trained.h5')
     parser.add_argument('--initial-weight', help='load pretrain h5 file', default='./pretrained.h5')
     parser.add_argument('--log-dir', help='tensor board log directory')
+    parser.add_argument('--count'type=int, help='number of preprocessing images', default=100)
+    parser.add_argument('--salt-and-pepper-noise', type=bool, help='use salt-and-pepper noise for preprocessing', defalut=False)
+    parser.add_argument('--salt-and-pepper-noise-rgb', type=int, help='rgb value of salt-and-pepper noise for preprocessing', defalut=0)
+    parser.add_argument('--hsv-noise', type=bool, help='use hsv noise for preprocessing', defalut=False)
     return parser
 
 def get_image_list(source_dir):
@@ -43,8 +48,14 @@ def get_image_list(source_dir):
     image_list = glob.glob(source_dir + '/*.jpg')
     return image_list
 
+def salt_and_pepper_noise(image_data, salt_and_pepper_noise_rgb):
+    row, col, ch = image_data.shape
+    pts_x = np.random.randint(0, col-1 , SALT_AND_PEPPER_NUMBER)
+    pts_y = np.random.randint(0, row-1 , SALT_AND_PEPPER_NUMBER)
+    image_data[(pts_y, pts_x)] = (salt_and_pepper_noise_rgb, salt_and_pepper_noise_rgb, salt_and_pepper_noise_rgb)
+    return image_data
 
-def load_image(image_list, resize_dir, logger=None):
+def load_image(image_list, resize_dir, count, salt_and_pepper_noise, salt_and_pepper_noise_rgb, hsv_noise, logger=None):
     """
     Load image and convert packed numpy array
     """
@@ -53,9 +64,16 @@ def load_image(image_list, resize_dir, logger=None):
     if logger:
         logger.info('Loading Image...')
 
-    for image_path in image_list:
+    for i in range(count):
+        image_path = random.choice(image_list)
         image_data = cv2.imread(image_path)
         image_data = cv2.resize(image_data, dsize=(INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE))
+
+        # data preprocessing
+        if salt_and_pepper_noise is True:
+            image_data = salt_and_pepper_noise(image_data=image_data, salt_and_pepper_noise_rgb=salt_and_pepper_noise_rgb)
+        if hsv_noise is True:
+            image_data = hsv_noise(image_data=image_data, salt_and_pepper_noise_rgb=salt_and_pepper_noise_rgb)
 
         if not os.path.exists(resize_dir):
             os.makedirs(resize_dir)
@@ -159,13 +177,21 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, logger=No
     if logger:
         logger.info('Finish Decoding and Saving Image!')
 
-def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_weight, initial_weight, log_dir, logger=None):
+def autoencoder(source_dir, decode_dir, resize_dir, batch_size, epoch, trained_weight, initial_weight, log_dir, count, salt_and_pepper_noise, salt_and_pepper_noise_rgb, hsv_noise, logger=None):
     """
     Run autoencoder
     """
     # data preparing
     image_path_list = get_image_list(source_dir)
-    image_data_array = load_image(image_path_list, resize_dir, logger)
+    image_data_array = load_image(
+        image_list=image_path_list, 
+        resize_dir=resize_dir, 
+        count=count, 
+        salt_and_pepper_noise=salt_and_pepper_noise, 
+        salt_and_pepper_noise_rgb=salt_and_pepper_noise_rgb, 
+        hsv_noise=hsv_noise, 
+        logger=logger
+    )
 
     # NN model preparing
     model = build_model()
@@ -197,5 +223,9 @@ if __name__ == '__main__':
         trained_weight=args.trained_weight,
         initial_weight=args.initial_weight,
         log_dir=args.log_dir,
+        count=args.count,
+        salt_and_pepper_noise=args.salt_and_pepper_noise,
+        salt_and_pepper_noise_rgb=args.salt_and_pepper_noise_rgb,
+        hsv_noise=args.hsv_noise,
         logger=logger,
     )

@@ -28,8 +28,8 @@ def get_random_value(image_size, crop_size):
     return value
 
 def get_random_origin_point(image_width, image_height, crop_width, crop_height):
-    x = get_random_value(image_width, crop_width)
-    y = get_random_value(image_height, crop_height)
+    x = get_random_value(image_size=image_width, crop_size=crop_width)
+    y = get_random_value(image_size=image_height, crop_size=crop_height)
     width = x + crop_width
     height = y + crop_height
     return x, y, width, height
@@ -41,7 +41,7 @@ def get_image_info(image_shape, size, seed):
     size = size.split(',')
     size = [int(a) for a in size]
 
-    image_width = image_shape[0]
+    image_width = image_shape[1]
     image_height = image_shape[0]
     crop_width = size[0]
     crop_height = size[1]
@@ -62,7 +62,7 @@ def crop_images(input_dir, include, output_dir, output_prefix, output_ext, count
     Crop images
     """
     for i in range(count):
-        image_data_src = get_image_src(input_dir, include)
+        image_data_src = get_image_src(input_dir=input_dir, include=include)
         image_data = cv2.imread(image_data_src)
         image_shape = np.shape(image_data)
         x, y, width, height = get_image_info(image_shape=image_shape, size=size, seed=seed)
