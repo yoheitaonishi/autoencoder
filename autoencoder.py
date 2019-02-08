@@ -63,15 +63,15 @@ def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise_rgb):
 
 def processing_hsv_noise(image_data, hue, saturation, value):
     hsv_image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2HSV)
-    for col_i, col in enumerate(hsv_image_data):
-        for pixel_i, pixel in enumerate(col):
-            random_h = random.choice(list(range(-hue, hue)))
-            random_s = random.choice(list(range(-saturation, saturation)))
-            random_v = random.choice(list(range(-value, value)))
+    hsv_image_shape = hsv_image_data.shape
+    new_image = np.zeros(hsv_image_shape, np.uint8)
 
-            hsv_image_data[col_i][pixel_i][0] = pixel[0] + random_h
-            hsv_image_data[col_i][pixel_i][1] = pixel[1] + random_s
-            hsv_image_data[col_i][pixel_i][2] = pixel[2] + random_v
+    random_h = round(random.random() * hue * 2 - hue)
+    random_s = round(random.random() * saturation * 2 - saturation)
+    random_v = round(random.random() * value * 2 - value)
+
+    new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.uint8)
+    hsv_image_data = hsv_image_data + new_image
 
     image_data = cv2.cvtColor(hsv_image_data, cv2.COLOR_HSV2BGR)
     return image_data
