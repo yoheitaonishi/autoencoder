@@ -65,9 +65,9 @@ def processing_hsv_noise(image_data, hue, saturation, value):
     hsv_image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2HSV)
     for col_i, col in enumerate(hsv_image_data):
         for pixel_i, pixel in enumerate(col):
-            random_h = random.random() * hue
-            random_s = random.random() * saturation
-            random_v = random.random() * value
+            random_h = random.choice(list(range(-hue, hue)))
+            random_s = random.choice(list(range(-saturation, saturation)))
+            random_v = random.choice(list(range(-value, value)))
 
             hsv_image_data[col_i][pixel_i][0] = pixel[0] + random_h
             hsv_image_data[col_i][pixel_i][1] = pixel[1] + random_s
