@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import random
+from tqdm import tqdm
 
 def setup_argument_parser():
     """
@@ -61,7 +62,7 @@ def crop_images(input_dir, include, output_dir, output_prefix, output_ext, count
     """
     Crop images
     """
-    for i in range(count):
+    for i in tqdm(range(count)):
         image_data_src = get_image_src(input_dir=input_dir, include=include)
         image_data = cv2.imread(image_data_src)
         image_shape = np.shape(image_data)
