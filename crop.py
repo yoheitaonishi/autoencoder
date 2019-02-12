@@ -3,6 +3,7 @@ import glob
 import os
 
 import cv2
+from tqdm import tqdm
 
 def setup_argument_parser():
     """
@@ -32,7 +33,7 @@ def get_image_list(input_dir, include):
     """
     Get image path
     """
-    image_list = glob.glob(input_dir + include)
+    image_list = glob.glob(os.path.join(input_dir, include))
     return image_list
 
 def crop_images(input_dir, include, output_dir, area):
@@ -42,7 +43,7 @@ def crop_images(input_dir, include, output_dir, area):
     image_list = get_image_list(input_dir, include)
     x, y, width, height = get_image_info(area=area)
 
-    for image_path in image_list:
+    for image_path in tqdm(image_list):
         image_data = cv2.imread(image_path)
         image_data = image_data[y:height, x:width]
 

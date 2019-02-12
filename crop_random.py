@@ -53,7 +53,7 @@ def get_image_src(input_dir, include):
     """
     Get image path
     """
-    image_list = glob.glob(input_dir + include)
+    image_list = glob.glob(os.path.join(input_dir, include))
     image_data_src = random.choice(image_list)
     return image_data_src
 

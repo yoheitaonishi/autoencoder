@@ -36,7 +36,7 @@ def setup_argument_parser():
     parser.add_argument('--batch-size', help='batch size', type=int, default=16)
     parser.add_argument('--epoch', help='epoch', type=int, default=50)
     parser.add_argument('--trained-weight', help='saving trained h5 file directory', default='./work/trained.h5')
-    parser.add_argument('--initial-weight', help='load pretrain h5 file', default='./pretrained.h5')
+    parser.add_argument('--initial-weight', help='load pretrain h5 file. default value is None')
     parser.add_argument('--log-dir', help='tensor board log directory')
     parser.add_argument('--count', type=int, help='number of preprocessing images', default=100)
     parser.add_argument('--salt-and-pepper-noise', type=bool, help='use salt-and-pepper noise for preprocessing', default=False)
@@ -51,7 +51,7 @@ def get_image_list(source_dir):
     """
     Get image path
     """
-    image_list = glob.glob(source_dir + '/*.jpg')
+    image_list = glob.glob(os.path.join(source_dir, '*.jpg'))
     return image_list
 
 def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise_rgb):
@@ -220,6 +220,7 @@ def autoencoder(source_dir, decode_dir, resize_dir, output_prefix, output_ext, b
 
     # NN model preparing
     model = build_model()
+    print(initial_weight)
     if initial_weight is not None:
         model.load_weights(initial_weight)
     set_optimizer(model)
