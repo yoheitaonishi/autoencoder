@@ -1,9 +1,19 @@
 import argparse
 import glob
+import logging
 import os
 
 import cv2
 from tqdm import tqdm
+
+def setup_logger():
+    """
+    Set up logger
+    """
+    logger = logging.getLogger("RUN INFORMATION")
+    logger.setLevel(logging.WARNING)
+    logging.basicConfig(format='%(asctime)s %(message)s', filename='logs/log.log')
+    return logger
 
 def setup_argument_parser():
     """
@@ -36,7 +46,7 @@ def get_image_list(input_dir, include):
     image_list = glob.glob(os.path.join(input_dir, include))
     return image_list
 
-def crop_images(input_dir, include, output_dir, area):
+def crop_images(input_dir, include, output_dir, area, logger=None):
     """
     Crop images
     """
@@ -45,6 +55,11 @@ def crop_images(input_dir, include, output_dir, area):
 
     for image_path in tqdm(image_list):
         image_data = cv2.imread(image_path)
+
+        row, col, ch = image_data.shape
+        if logger and (height > row or width > col):
+            logger.warning('Crop size is out of image size. File name is ' + image_path)
+
         image_data = image_data[y:height, x:width]
 
         if not os.path.exists(output_dir):
@@ -57,6 +72,7 @@ def crop_images(input_dir, include, output_dir, area):
 
 if __name__ == '__main__':
     # setup
+    logger = setup_logger()
     parser = setup_argument_parser()
     args = parser.parse_args()
 
@@ -65,5 +81,6 @@ if __name__ == '__main__':
         input_dir=args.input_dir,
         include=args.include,
         output_dir=args.output_dir,
-        area=args.area
+        area=args.area,
+        logger=logger
     )
