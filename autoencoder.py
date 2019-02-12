@@ -6,13 +6,12 @@ import os
 import numpy as np
 import cv2
 import random
+from tqdm import tqdm
 from keras.callbacks import TensorBoard
 from keras.layers import Conv2D, Input, MaxPooling2D, UpSampling2D
 from keras.models import Model
+from keras import optimizers
 from keras.utils import plot_model
-
-INPUT_IMAGE_SIZE = 128
-SALT_AND_PEPPER_NUMBER = 1000
 
 def setup_logger():
     """
@@ -31,6 +30,7 @@ def setup_argument_parser():
     parser.add_argument('--source-dir', help='source image directory', default='./work/images', required=True)
     parser.add_argument('--decode-dir', help='saving decoded image directory', default='./work/decode', required=True)
     parser.add_argument('--resize-dir', help='saving resized image directory', default = './work/resize', required=True)
+    parser.add_argument('--input-image-size', type=int, help='input image size for autoencoder network after processing resize', default=128)
     parser.add_argument('--output-prefix', help='source image file name', default='label_poodl', required=True)
     parser.add_argument('--output-ext', help='source image file extension', default='png', required=True)
     parser.add_argument('--batch-size', help='batch size', type=int, default=16)
@@ -39,12 +39,9 @@ def setup_argument_parser():
     parser.add_argument('--initial-weight', help='load pretrain h5 file. default value is None')
     parser.add_argument('--log-dir', help='tensor board log directory')
     parser.add_argument('--count', type=int, help='number of preprocessing images', default=100)
-    parser.add_argument('--salt-and-pepper-noise', type=bool, help='use salt-and-pepper noise for preprocessing', default=False)
-    parser.add_argument('--salt-and-pepper-noise-rgb', type=int, help='rgb value of salt-and-pepper noise for preprocessing', default=0)
-    parser.add_argument('--hsv-noise', type=bool, help='use hsv noise for preprocessing', default=False)
-    parser.add_argument('--hue', type=int, help='maximum h parameter of hsv', default=0)
-    parser.add_argument('--saturation', type=int, help='maximum s parameter of hsv', default=0)
-    parser.add_argument('--value', type=int, help='maximum v parameter of hsv', default=0)
+    parser.add_argument('--salt-and-pepper-noise', type=int, help='use salt-and-pepper noise for preprocessing', default=0)
+    parser.add_argument('--hsv-noise', help='use hsv noise for preprocessing', default='0,0,0')
+    parser.add_argument('--lr', type=float, help='learning rate', default=0.01)
     return parser
 
 def get_image_list(source_dir):
@@ -54,21 +51,31 @@ def get_image_list(source_dir):
     image_list = glob.glob(os.path.join(source_dir, '*.jpg'))
     return image_list
 
-def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise_rgb):
+def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise):
     row, col, ch = image_data.shape
-    pts_x = np.random.randint(0, col-1 , SALT_AND_PEPPER_NUMBER)
-    pts_y = np.random.randint(0, row-1 , SALT_AND_PEPPER_NUMBER)
-    image_data[(pts_y, pts_x)] = (salt_and_pepper_noise_rgb, salt_and_pepper_noise_rgb, salt_and_pepper_noise_rgb)
+    pts_x = np.random.randint(0, col-1 , salt_and_pepper_noise)
+    pts_y = np.random.randint(0, row-1 , salt_and_pepper_noise)
+    random_rgb = random.choice([0, 255])
+    image_data[(pts_y, pts_x)] = (random_rgb, random_rgb, random_rgb)
     return image_data
 
-def processing_hsv_noise(image_data, hue, saturation, value):
+def get_random_hsv_parameter(hsv_noise):
+    random_noise = round(random.random() * hsv_noise * 2 - hsv_noise)
+    random_noise = max(min(random_noise, 255), 0)
+    return random_noise
+
+def processing_hsv_noise(image_data, hsv_noise):
     hsv_image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2HSV)
     hsv_image_shape = hsv_image_data.shape
     new_image = np.zeros(hsv_image_shape, np.uint8)
 
-    random_h = round(random.random() * hue * 2 - hue)
-    random_s = round(random.random() * saturation * 2 - saturation)
-    random_v = round(random.random() * value * 2 - value)
+    hue = hsv_noise[0]
+    saturation = hsv_noise[1]
+    value = hsv_noise[2]
+
+    random_h = get_random_hsv_parameter(hue)
+    random_s = get_random_hsv_parameter(saturation)
+    random_v = get_random_hsv_parameter(value)
 
     new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.uint8)
     hsv_image_data = hsv_image_data + new_image
@@ -76,7 +83,22 @@ def processing_hsv_noise(image_data, hue, saturation, value):
     image_data = cv2.cvtColor(hsv_image_data, cv2.COLOR_HSV2BGR)
     return image_data
 
-def load_image(image_list, resize_dir, output_prefix, output_ext, count, salt_and_pepper_noise, salt_and_pepper_noise_rgb, hsv_noise, hue, saturation, value, logger=None):
+def is_hsv_format(hsv_noise):
+    hsv_noise_list = hsv_noise.split(',')
+    if len(hsv_noise_list) is not 3:
+        return False
+
+    hsv_type_check = [hsv.isdecimal() for hsv in hsv_noise_list]
+    if False in hsv_type_check:
+        return False
+
+    hsv_value_check = [0 <= int(hsv) for hsv in hsv_noise_list]
+    if False in hsv_value_check:
+        return False
+
+    return True
+
+def load_image(image_list, resize_dir, input_image_size, output_prefix, output_ext, count, salt_and_pepper_noise, hsv_noise, logger=None):
     """
     Load image and convert packed numpy array
     """
@@ -85,16 +107,24 @@ def load_image(image_list, resize_dir, output_prefix, output_ext, count, salt_an
     if logger:
         logger.info('Loading Image...')
 
-    for i in range(count):
+    # validataion
+    if is_hsv_format(hsv_noise) is False:
+        raise ValueError('hsv format is invalid!!')
+    else:
+        hsv_noise = hsv_noise.split(',')
+        hsv_noise = [int(n) for n in hsv_noise]
+
+    print('Preprocessing...')
+    for i in tqdm(range(count)):
         image_path = random.choice(image_list)
         image_data = cv2.imread(image_path)
-        image_data = cv2.resize(image_data, dsize=(INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE))
+        image_data = cv2.resize(image_data, dsize=(input_image_size, input_image_size))
 
         # data preprocessing
-        if salt_and_pepper_noise is True:
-            image_data = processing_salt_and_pepper_noise(image_data=image_data, salt_and_pepper_noise_rgb=salt_and_pepper_noise_rgb)
-        if hsv_noise is True:
-            image_data = processing_hsv_noise(image_data=image_data, hue=hue, saturation=saturation, value=value)
+        if salt_and_pepper_noise > 0:
+            image_data = processing_salt_and_pepper_noise(image_data=image_data, salt_and_pepper_noise=salt_and_pepper_noise)
+        if sum(hsv_noise) > 0:
+            image_data = processing_hsv_noise(image_data=image_data, hsv_noise=hsv_noise)
 
         if not os.path.exists(resize_dir):
             os.makedirs(resize_dir)
@@ -109,18 +139,18 @@ def load_image(image_list, resize_dir, output_prefix, output_ext, count, salt_an
 
     image_data_array = np.array(image_data_array)
     image_data_array = image_data_array.astype('float32') / 255.
-    image_data_array = np.reshape(image_data_array, (len(image_data_array), INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE, 3)) 
+    image_data_array = np.reshape(image_data_array, (len(image_data_array), input_image_size, input_image_size, 3)) 
 
     if logger:
         logger.info('Finish Loading Image!')
 
     return image_data_array
 
-def build_model():
+def build_model(input_image_size):
     """
     Building model
     """
-    input_img = Input(shape=(INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE, 3)) 
+    input_img = Input(shape=(input_image_size, input_image_size, 3)) 
     x = Conv2D(64, (3, 3), activation='relu', padding='same')(input_img)
     x = MaxPooling2D((2, 2), padding='same')(x)
     x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
@@ -141,10 +171,11 @@ def build_model():
     autoencoder = Model(input_img, decoded)
     return autoencoder
 
-def set_optimizer(model):
+def set_optimizer(model, lr):
     """
     Setting optimizer and loss function
     """
+    optimizer = optimizers.Adagrad(lr=lr, epsilon=None, decay=0.0 )
     model.compile(optimizer='AdaDelta', loss='binary_crossentropy')
 
 def train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger=None):
@@ -197,7 +228,7 @@ def decode_image(model, image_data_array, image_path_list, decode_dir, output_pr
     if logger:
         logger.info('Finish Decoding and Saving Image!')
 
-def autoencoder(source_dir, decode_dir, resize_dir, output_prefix, output_ext, batch_size, epoch, trained_weight, initial_weight, log_dir, count, salt_and_pepper_noise, salt_and_pepper_noise_rgb, hsv_noise, hue, saturation, value, logger=None):
+def autoencoder(source_dir, decode_dir, resize_dir, input_image_size, output_prefix, output_ext, batch_size, epoch, trained_weight, initial_weight, log_dir, count, salt_and_pepper_noise, hsv_noise, lr, logger=None):
     """
     Run autoencoder
     """
@@ -206,24 +237,20 @@ def autoencoder(source_dir, decode_dir, resize_dir, output_prefix, output_ext, b
     image_data_array = load_image(
         image_list=image_path_list, 
         resize_dir=resize_dir, 
+        input_image_size=input_image_size,
         output_prefix=output_prefix,
         output_ext=output_ext,
         count=count, 
         salt_and_pepper_noise=salt_and_pepper_noise, 
-        salt_and_pepper_noise_rgb=salt_and_pepper_noise_rgb, 
         hsv_noise=hsv_noise, 
-        hue=hue, 
-        saturation=saturation, 
-        value=value,
         logger=logger
     )
 
     # NN model preparing
-    model = build_model()
-    print(initial_weight)
+    model = build_model(input_image_size=input_image_size)
     if initial_weight is not None:
         model.load_weights(initial_weight)
-    set_optimizer(model)
+    set_optimizer(model, lr)
 
     # training
     train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger)
@@ -243,6 +270,7 @@ if __name__ == '__main__':
         source_dir=args.source_dir, 
         decode_dir=args.decode_dir,
         resize_dir=args.resize_dir,
+        input_image_size=args.input_image_size,
         output_prefix=args.output_prefix,
         output_ext=args.output_ext,
         batch_size=args.batch_size,
@@ -252,10 +280,7 @@ if __name__ == '__main__':
         log_dir=args.log_dir,
         count=args.count,
         salt_and_pepper_noise=args.salt_and_pepper_noise,
-        salt_and_pepper_noise_rgb=args.salt_and_pepper_noise_rgb,
         hsv_noise=args.hsv_noise,
-        hue=args.hue, 
-        saturation=args.saturation, 
-        value=args.value,
+        lr=args.lr,
         logger=logger,
     )

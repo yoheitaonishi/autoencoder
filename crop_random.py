@@ -17,7 +17,7 @@ def setup_argument_parser():
     parser.add_argument('--output-dir', help='source image directory', default='work/output/', required=True)
     parser.add_argument('--output-prefix', help='source image file name', default='label_poodl', required=True)
     parser.add_argument('--output-ext', help='source image file extension', default='png', required=True)
-    parser.add_argument('--size', help='crop size (width, height)', default='300, 300', required=True)
+    parser.add_argument('--size', help='crop size (width, height)', default='300,300', required=True)
     parser.add_argument('--count', help='number of output images', type=int, default=100, required=True)
     parser.add_argument('--seed', help='random seed for deciding origin point(x,y)', type=int, default=1234567)
     return parser
