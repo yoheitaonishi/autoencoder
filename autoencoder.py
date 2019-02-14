@@ -59,9 +59,12 @@ def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise):
     image_data[(pts_y, pts_x)] = (random_rgb, random_rgb, random_rgb)
     return image_data
 
-def get_random_hsv_parameter(hsv_noise):
+def get_random_hsv_parameter(hsv_noise, hsv_type):
     random_noise = round(random.random() * hsv_noise * 2 - hsv_noise)
-    random_noise = max(min(random_noise, 255), 0)
+    if hsv_noise == 'h':
+        random_noise = max(min(random_noise, 300), 0)
+    if hsv_noise == 's' or hsv_noise == 'v':
+        random_noise = max(min(random_noise, 100), 0)
     return random_noise
 
 def processing_hsv_noise(image_data, hsv_noise):
@@ -73,9 +76,9 @@ def processing_hsv_noise(image_data, hsv_noise):
     saturation = hsv_noise[1]
     value = hsv_noise[2]
 
-    random_h = get_random_hsv_parameter(hue)
-    random_s = get_random_hsv_parameter(saturation)
-    random_v = get_random_hsv_parameter(value)
+    random_h = get_random_hsv_parameter(hue, 'h')
+    random_s = get_random_hsv_parameter(saturation, 's')
+    random_v = get_random_hsv_parameter(value, 'v')
 
     new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.uint8)
     hsv_image_data = hsv_image_data + new_image
