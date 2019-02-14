@@ -19,7 +19,14 @@ def setup_logger():
     """
     logger = logging.getLogger("RUN INFORMATION")
     logger.setLevel(logging.INFO)
-    logging.basicConfig(format='%(asctime)s %(message)s', filename='logs/log.log')
+    log_dir = 'logs'
+    log_file = 'log.log'
+    log_path = os.path.join(log_dir, log_file)
+
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    logging.basicConfig(format='%(asctime)s %(message)s', filename=log_path)
     return logger
 
 def setup_argument_parser():
@@ -106,6 +113,7 @@ def load_image(image_list, resize_dir, input_image_size, output_prefix, output_e
     Load image and convert packed numpy array
     """
     image_data_array = []
+    target_data_array = []
 
     if logger:
         logger.info('Loading Image...')
@@ -122,6 +130,9 @@ def load_image(image_list, resize_dir, input_image_size, output_prefix, output_e
         image_path = random.choice(image_list)
         image_data = cv2.imread(image_path)
         image_data = cv2.resize(image_data, dsize=(input_image_size, input_image_size))
+
+        target_image_data = np.asarray(image_data)
+        target_data_array.append(target_image_data)
 
         # data preprocessing
         if salt_and_pepper_noise > 0:
@@ -144,10 +155,14 @@ def load_image(image_list, resize_dir, input_image_size, output_prefix, output_e
     image_data_array = image_data_array.astype('float32') / 255.
     image_data_array = np.reshape(image_data_array, (len(image_data_array), input_image_size, input_image_size, 3)) 
 
+    target_data_array = np.array(target_data_array)
+    target_data_array = target_data_array.astype('float32') / 255.
+    target_data_array = np.reshape(target_data_array, (len(target_data_array), input_image_size, input_image_size, 3)) 
+
     if logger:
         logger.info('Finish Loading Image!')
 
-    return image_data_array
+    return image_data_array, target_data_array
 
 def build_model(input_image_size):
     """
@@ -181,7 +196,7 @@ def set_optimizer(model, lr):
     optimizer = optimizers.Adagrad(lr=lr, epsilon=None, decay=0.0 )
     model.compile(optimizer=optimizer, loss='binary_crossentropy')
 
-def train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger=None):
+def train_autoencoder(model, image_data_array, target_data_array, batch_size, epoch, trained_weight, log_dir, logger=None):
     """
     Training model and save trained weight
     """
@@ -189,18 +204,18 @@ def train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight
         logger.info('Training Model...')
 
     if log_dir is not None:
-        model.fit(image_data_array, image_data_array,
+        model.fit(image_data_array, target_data_array,
                         epochs=epoch,
                         batch_size=batch_size,
                         shuffle=True,
-                        validation_data=(image_data_array, image_data_array),
+                        validation_data=(image_data_array, target_data_array),
                         callbacks=[TensorBoard(log_dir=log_dir)])
     else:
-        model.fit(image_data_array, image_data_array,
+        model.fit(image_data_array, target_data_array,
                         epochs=epoch,
                         batch_size=batch_size,
                         shuffle=True,
-                        validation_data=(image_data_array, image_data_array))
+                        validation_data=(image_data_array, target_data_array))
 
     model.save_weights(trained_weight)
 
@@ -237,7 +252,7 @@ def autoencoder(source_dir, decode_dir, resize_dir, input_image_size, output_pre
     """
     # data preparing
     image_path_list = get_image_list(source_dir)
-    image_data_array = load_image(
+    image_data_array, target_data_array = load_image(
         image_list=image_path_list, 
         resize_dir=resize_dir, 
         input_image_size=input_image_size,
@@ -256,7 +271,7 @@ def autoencoder(source_dir, decode_dir, resize_dir, input_image_size, output_pre
     set_optimizer(model, lr)
 
     # training
-    train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger)
+    train_autoencoder(model, image_data_array, target_data_array, batch_size, epoch, trained_weight, log_dir, logger)
 
     # output result
     decode_image(model, image_data_array, image_path_list, decode_dir, output_prefix, output_ext, logger=None)
