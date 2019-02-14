@@ -274,7 +274,7 @@ def autoencoder(source_dir, decode_dir, resize_dir, input_image_size, output_pre
     train_autoencoder(model, image_data_array, target_data_array, batch_size, epoch, trained_weight, log_dir, logger)
 
     # output result
-    decode_image(model, image_data_array, image_path_list, decode_dir, output_prefix, output_ext, logger=None)
+    decode_image(model, target_data_array, image_path_list, decode_dir, output_prefix, output_ext, logger=None)
 
 if __name__ == '__main__':
     # setup
