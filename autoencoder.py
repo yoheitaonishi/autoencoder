@@ -61,16 +61,12 @@ def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise):
 
 def get_random_hsv_parameter(hsv_noise, hsv_type):
     random_noise = round(random.random() * hsv_noise * 2 - hsv_noise)
-    if hsv_noise == 'h':
-        random_noise = max(min(random_noise, 300), 0)
-    if hsv_noise == 's' or hsv_noise == 'v':
-        random_noise = max(min(random_noise, 100), 0)
     return random_noise
 
 def processing_hsv_noise(image_data, hsv_noise):
     hsv_image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2HSV)
     hsv_image_shape = hsv_image_data.shape
-    new_image = np.zeros(hsv_image_shape, np.uint8)
+    new_image = np.zeros(hsv_image_shape, np.int16)
 
     hue = hsv_noise[0]
     saturation = hsv_noise[1]
@@ -80,7 +76,7 @@ def processing_hsv_noise(image_data, hsv_noise):
     random_s = get_random_hsv_parameter(saturation, 's')
     random_v = get_random_hsv_parameter(value, 'v')
 
-    new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.uint8)
+    new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.int16)
     hsv_image_data = hsv_image_data + new_image
 
     image_data = cv2.cvtColor(hsv_image_data, cv2.COLOR_HSV2BGR)
@@ -179,7 +175,7 @@ def set_optimizer(model, lr):
     Setting optimizer and loss function
     """
     optimizer = optimizers.Adagrad(lr=lr, epsilon=None, decay=0.0 )
-    model.compile(optimizer='AdaDelta', loss='binary_crossentropy')
+    model.compile(optimizer=optimizer, loss='binary_crossentropy')
 
 def train_autoencoder(model, image_data_array, batch_size, epoch, trained_weight, log_dir, logger=None):
     """
