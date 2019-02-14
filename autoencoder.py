@@ -59,7 +59,7 @@ def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise):
     image_data[(pts_y, pts_x)] = (random_rgb, random_rgb, random_rgb)
     return image_data
 
-def get_random_hsv_parameter(hsv_noise, hsv_type):
+def get_random_hsv_parameter(hsv_noise):
     random_noise = round(random.random() * hsv_noise * 2 - hsv_noise)
     return random_noise
 
@@ -72,12 +72,16 @@ def processing_hsv_noise(image_data, hsv_noise):
     saturation = hsv_noise[1]
     value = hsv_noise[2]
 
-    random_h = get_random_hsv_parameter(hue, 'h')
-    random_s = get_random_hsv_parameter(saturation, 's')
-    random_v = get_random_hsv_parameter(value, 'v')
+    random_h = get_random_hsv_parameter(hue)
+    random_s = get_random_hsv_parameter(saturation)
+    random_v = get_random_hsv_parameter(value)
 
     new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.int16)
     hsv_image_data = hsv_image_data + new_image
+
+    hsv_image_data = hsv_image_data.clip(max=np.array([[255, 255, 255]])[:, np.newaxis])
+    hsv_image_data = hsv_image_data.clip(min=np.array([[0, 0, 0]])[:, np.newaxis])
+    hsv_image_data = np.array(hsv_image_data, dtype=np.uint8)
 
     image_data = cv2.cvtColor(hsv_image_data, cv2.COLOR_HSV2BGR)
     return image_data
