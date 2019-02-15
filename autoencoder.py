@@ -58,12 +58,24 @@ def get_image_list(source_dir):
     image_list = glob.glob(os.path.join(source_dir, '*.jpg'))
     return image_list
 
+def format_image_data(image_data):
+    image_data = image_data.clip(max=np.array([[255, 255, 255]])[:, np.newaxis])
+    image_data = image_data.clip(min=np.array([[0, 0, 0]])[:, np.newaxis])
+    image_data = np.array(image_data, dtype=np.uint8)
+    return image_data
+ 
 def processing_salt_and_pepper_noise(image_data, salt_and_pepper_noise):
     row, col, ch = image_data.shape
+    new_image = np.zeros(image_data.shape, np.int16)
+
     pts_x = np.random.randint(0, col-1 , salt_and_pepper_noise)
     pts_y = np.random.randint(0, row-1 , salt_and_pepper_noise)
-    random_rgb = random.choice([0, 255])
-    image_data[(pts_y, pts_x)] = (random_rgb, random_rgb, random_rgb)
+    pts_rgb = np.random.choice([-255, 255], salt_and_pepper_noise)
+    pts_rgb = np.array([pts_rgb, pts_rgb, pts_rgb]).reshape([-1, 3])
+
+    new_image[(pts_y, pts_x)] = pts_rgb
+    image_data = image_data + new_image
+    image_data = format_image_data(image_data)
     return image_data
 
 def get_random_hsv_parameter(hsv_noise):
@@ -85,11 +97,7 @@ def processing_hsv_noise(image_data, hsv_noise):
 
     new_image = new_image + np.array([random_h, random_s, random_v], dtype=np.int16)
     hsv_image_data = hsv_image_data + new_image
-
-    hsv_image_data = hsv_image_data.clip(max=np.array([[255, 255, 255]])[:, np.newaxis])
-    hsv_image_data = hsv_image_data.clip(min=np.array([[0, 0, 0]])[:, np.newaxis])
-    hsv_image_data = np.array(hsv_image_data, dtype=np.uint8)
-
+    hsv_image_data = format_image_data(hsv_image_data)
     image_data = cv2.cvtColor(hsv_image_data, cv2.COLOR_HSV2BGR)
     return image_data
 
