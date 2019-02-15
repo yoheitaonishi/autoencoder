@@ -12,6 +12,7 @@ from keras.layers import Conv2D, Input, MaxPooling2D, UpSampling2D
 from keras.models import Model
 from keras import optimizers
 from keras.utils import plot_model
+import tensorflow as tf
 
 def setup_logger():
     """
@@ -285,6 +286,13 @@ def autoencoder(source_dir, decode_dir, resize_dir, input_image_size, output_pre
     decode_image(model, target_data_array, image_path_list, decode_dir, output_prefix, output_ext, logger=None)
 
 if __name__ == '__main__':
+    config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            per_process_gpu_memory_fraction=0.8
+        )
+    )
+
+    tf.Session(config=config)
     # setup
     logger = setup_logger()
 
